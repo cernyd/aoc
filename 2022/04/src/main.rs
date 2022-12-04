@@ -27,8 +27,17 @@ fn does_contain(s1_start: i32, s1_end: i32, s2_start: i32, s2_end: i32) -> bool 
     return s1_start <= s2_start && s1_end >= s2_end;
 }
 
+// If a is between b and c
+fn in_range(a: i32, b: i32, c: i32) -> bool {
+    return b <= a && a <= c;
+}
 
-fn overlap_check(section: &str) -> bool {
+// Does s1 overlap with s2?
+fn does_overlap(s1_start: i32, s1_end: i32, s2_start: i32, s2_end: i32) -> bool {
+    return in_range(s1_start, s2_start, s2_end) || in_range(s1_end, s2_start, s2_end);
+}
+
+fn overlap_check(section: &str, total_overlap: bool) -> bool {
     let sections: Vec<_> = section.split(",").collect();
     let section_1 = section_range(sections[0]);
     let section_2 = section_range(sections[1]);
@@ -39,19 +48,36 @@ fn overlap_check(section: &str) -> bool {
     let s2_start = section_2[0];
     let s2_end = section_2[1];
 
-    return does_contain(s1_start, s1_end, s2_start, s2_end) || does_contain(s2_start, s2_end, s1_start, s1_end);
+    let mut result = does_contain(s1_start, s1_end, s2_start, s2_end) ||
+                           does_contain(s2_start, s2_end, s1_start, s1_end);
+
+    if total_overlap {
+        return result;
+    }
+
+    result = result || does_overlap(s1_start, s1_end, s2_start, s2_end) ||
+                       does_overlap(s2_start, s2_end, s1_start, s1_end);
+
+    return result;
 }
 
 
-fn main() {
-    let count = read_lines("assignments.txt").map(
+fn get_overlaps(lines: Lines<BufReader<File>>, total_overlap: bool) -> i32 {
+    return lines.map(
         |line|
         if let Ok(line_value) = line {
-            return overlap_check(&line_value) as i32;
+            return overlap_check(&line_value, total_overlap) as i32;
         } else {
             panic!();
         }
     ).sum::<i32>();
+}
 
-    println!("Count: {count}");
+
+fn main() {
+    let total_overlaps = get_overlaps(read_lines("assignments.txt"), true);
+    let any_overlaps = get_overlaps(read_lines("assignments.txt"), false);
+
+    println!("Total overlaps: {total_overlaps}");
+    println!("Any overlaps: {any_overlaps}");
 }
