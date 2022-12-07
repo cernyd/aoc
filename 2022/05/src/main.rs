@@ -85,10 +85,35 @@ fn execute_instruction(instruction: &String, crate_stacks: &mut Vec::<Vec::<char
     let from = words[3].parse::<usize>().unwrap() - 1;
     let to = words[5].parse::<usize>().unwrap() - 1;
 
+    // Part 1
+    // crate_move_old(count, crate_stacks, from, to);
+    // Part 2
+    crate_move_new(count, crate_stacks, from, to);
+}
+
+
+// Crane from part 1 (moves crates individually)
+fn crate_move_old(count: usize, crate_stacks: &mut Vec<Vec<char>>, from: usize, to: usize) {
     // Execute move
     for _ in 0..=count {
         let cr = crate_stacks[from].pop().unwrap();
         crate_stacks[to].push(cr);
+    }
+}
+
+
+// Crane from part 2 (moves all crates at once)
+fn crate_move_new(count: usize, crate_stacks: &mut Vec<Vec<char>>, from: usize, to: usize) {
+    let mut tmp: Vec<char> = Vec::new();
+
+    // Push to temporary stack (representing the crane hand)
+    for _ in 0..=count {
+        tmp.push(crate_stacks[from].pop().unwrap());
+    }
+
+    // Pop to the target stack (in the original order)
+    while !tmp.is_empty() {
+        crate_stacks[to].push(tmp.pop().unwrap());
     }
 }
 
