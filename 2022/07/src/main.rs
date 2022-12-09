@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, io::{BufRead, Lines}};
+use std::{fs::File, io::BufReader, io::{BufRead, Lines}, collections::HashMap, rc::Rc, cell::{RefCell}, borrow::{BorrowMut, Borrow}};
 
 
 #[derive(Debug)]
@@ -9,27 +9,21 @@ struct DirectoryFile {
 
 
 #[derive(Debug)]
-struct Directory {
-    parent: Option<Box<Directory>>,
+struct Directory<'a> {
+    parent: Option<&'a mut Box<Directory<'a>>>,
     name: String,
-    files: Vec<DirectoryFile>,
-    directories: Vec<Directory>
+    files: Vec<Box<DirectoryFile>>,
+    directories: HashMap::<String, Box<Directory<'a>>>
 }
 
 
-impl Directory {
-    fn new(parent: Option<Directory>, name: String) -> Directory {
-        let mut p = None;
-
-        if parent.is_some() {
-            p = Some(Box::new(parent.unwrap()));
-        }
-
+impl<'a> Directory<'a> {
+    fn new(parent: Option<&'a mut Box<Directory<'a>>>, name: String) -> Directory {
         return Directory {
-            parent: p,
+            parent: parent,
             name: name,
-            files: Vec::<DirectoryFile>::new(),
-            directories: Vec::<Directory>::new()
+            files: Vec::new(),
+            directories: HashMap::new()
         };
     }
 }
@@ -59,14 +53,15 @@ fn main() {
     let mut jump_to = &State::Seek;
     let mut lines = read_lines("filesys.txt").map(|line| line.unwrap());
 
-    let mut root_dir = Directory::new(None, String::from("/"));
-    let mut curdir = &root_dir;
-
-    println!("{root_dir:?}");
+    let mut root_dir = Box::new(Directory::new(None, String::from("/")));
+    let mut curdir = &mut root_dir;
 
     let mut line: String = String::new();
     loop {
+        println!("{:?}", curdir);
+
         match state {
+            /* ----------------------------- Load next line ----------------------------- */
             State::LoadNext => {
                 let line_value = lines.next();
 
@@ -78,6 +73,7 @@ fn main() {
                 line = line_value.unwrap();
                 state = jump_to;
             },
+            /* ---------------------------- Seek next command --------------------------- */
             State::Seek => {
                 if line.starts_with('$') {
                     println!("COMMAND: {line}");
@@ -93,29 +89,37 @@ fn main() {
                     }
                 }
             },
+            /* ---------------------------- Change directory ---------------------------- */
             State::ChangeDir => {
                 let target_dir = line.split(" ").nth(2).unwrap();
                 println!("CD TO '{target_dir}'");
 
                 match target_dir {
                     "/" => {
-                        curdir = &root_dir;
+                        curdir = &mut root_dir;
                     },
                     ".." => {
-                        let dir = curdir.parent.as_ref();
-
-                        if dir.is_none() {
-                            panic!("Directory '{}' has no parent directory!", curdir.name);
-                        }
-                        curdir = dir.unwrap();
+                        curdir = curdir.parent.as_mut().unwrap();
                         println!("New curdir: '{}'", curdir.name);
                     },
-                    _ => ()
+                    _ => {
+                        println!("CD to other directory '{}'", target_dir);
+                        if !curdir.directories.contains_key(target_dir) {
+                            // TODO: parent reference missing
+                            let new_dir = Box::new(Directory::new(None, String::from(target_dir)));
+                            curdir.directories.insert(
+                                String::from(target_dir), new_dir
+                            );
+                        }
+
+                        curdir = curdir.directories.get_mut(target_dir).unwrap();
+                    }
                 }
 
                 state = &State::LoadNext;
                 jump_to = &State::Seek;
             },
+            /* ----------------------------- List directory ----------------------------- */
             State::ListDir => {
                 state = &State::LoadNext;
                 jump_to = &State::ListDir;
@@ -139,4 +143,3 @@ fn main() {
         }
     }
 }
-
