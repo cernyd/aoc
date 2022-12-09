@@ -172,7 +172,7 @@ fn main() {
     }
 
     let mut dir_sizes = HashMap::<String, usize>::new();
-    let _root_size = get_dir_sizes(&root_dir.borrow(), &mut dir_sizes);
+    let root_size = get_dir_sizes(&root_dir.borrow(), &mut dir_sizes);
 
     let limit: usize = 100000;
     let mut below_limit: usize = 0;
@@ -188,4 +188,16 @@ fn main() {
     println!("----");
     println!("Total dirs: {}", dir_sizes.len());
     println!("Below 10k total {dirs_below_limit} dirs: {below_limit}");
+
+    let mut v: Vec<_> = dir_sizes.into_iter().collect();
+    v.sort_by(|a, b| a.1.cmp(&b.1));
+
+    let avail_space = 70000000 - root_size;
+    let more_required = 30000000 - avail_space;
+    for (name, size) in v.iter() {
+        if *size > more_required {
+            println!("Delete dir '{name}' to free {size} bytes");
+            break;
+        }
+    }
 }
