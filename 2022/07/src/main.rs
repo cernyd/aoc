@@ -3,7 +3,7 @@ use std::{fs::File, io::BufReader, io::{BufRead, Lines}, collections::HashMap, c
 
 #[derive(Debug)]
 struct DirectoryFile {
-    name: String,
+    _name: String,
     size: usize
 }
 
@@ -33,8 +33,6 @@ impl<'a> Directory<'a> {
 enum State {
     LoadNext,
     Seek,
-    DirEntry,
-
     ChangeDir,
     ListDir
 }
@@ -60,25 +58,45 @@ fn clone_parent(node: Rc<RefCell<Box<Directory>>>) -> Rc<RefCell<Box<Directory>>
 }
 
 
+fn get_dir_sizes(dir: &Directory, dirs_list: &mut HashMap<String, usize>) -> usize {
+    let mut total: usize = dir.files.iter().map(|file| file.size).sum::<usize>();
+
+    for (_, d) in dir.directories.iter() {
+        total += get_dir_sizes(&d.borrow(), dirs_list);
+    }
+
+    let mut i = 0;
+    // Find suitable name
+    loop {
+        let name = String::from(format!("{}_{i}", dir.name));
+
+        if !dirs_list.contains_key(&name) {
+            dirs_list.insert(name, total);
+            break;
+        }
+        i += 1;
+    }
+
+    return total;
+}
+
+
 fn main() {
     let mut state = &State::LoadNext;
     let mut jump_to = &State::Seek;
     let mut lines = read_lines("filesys.txt").map(|line| line.unwrap());
 
-    let mut root_dir = Directory::new(None, String::from("/"));
+    let root_dir = Directory::new(None, String::from("/"));
     let mut curdir = root_dir.clone();
 
     let mut line: String = String::new();
     loop {
-        // println!("CURDIR: {:?}", curdir.borrow().name);
-
         match state {
             /* ----------------------------- Load next line ----------------------------- */
             State::LoadNext => {
                 let line_value = lines.next();
 
                 if line_value.is_none() {
-                    println!("Last line reached, quitting");
                     break;
                 }
 
@@ -108,7 +126,7 @@ fn main() {
                         curdir = root_dir.clone();
                     },
                     ".." => {
-                        curdir = clone_parent(curdir.clone());
+                        curdir = clone_parent(curdir);
                     },
                     _ => {
                         if !curdir.borrow().directories.contains_key(target_dir) {
@@ -137,10 +155,11 @@ fn main() {
                     },
                     '0'..='9' => {
                         let filesize = line.split(" ").nth(0).unwrap().parse::<usize>().expect("Failed to parse filesize");
+                        // println!("{} fsize {filesize}", line);
                         let filename = line.split(" ").nth(1).unwrap();
 
                         curdir.borrow_mut().files.push(
-                            DirectoryFile { name: String::from(filename), size: filesize }
+                            DirectoryFile { _name: String::from(filename), size: filesize }
                         );
                     },
                     // 'd' => {
@@ -148,10 +167,25 @@ fn main() {
                     // },
                     _ => ()
                 };
-            },
-            _ => {
-                panic!("Unimplemented state '{state:?}'");
             }
         }
     }
+
+    let mut dir_sizes = HashMap::<String, usize>::new();
+    let _root_size = get_dir_sizes(&root_dir.borrow(), &mut dir_sizes);
+
+    let limit: usize = 100000;
+    let mut below_limit: usize = 0;
+
+    let mut dirs_below_limit = 0;
+    for (_, dir_size) in dir_sizes.iter() {
+        if *dir_size <= limit {
+            below_limit += dir_size;
+            dirs_below_limit += 1;
+        }
+    }
+
+    println!("----");
+    println!("Total dirs: {}", dir_sizes.len());
+    println!("Below 10k total {dirs_below_limit} dirs: {below_limit}");
 }
