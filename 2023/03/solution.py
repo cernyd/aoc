@@ -1,7 +1,10 @@
 # https://adventofcode.com/2023/day/3
+from collections import defaultdict
 from dataclasses import dataclass
+from functools import reduce
 from string import digits
-from typing import Generator
+from typing import Dict, Generator, Set, Tuple
+symbols = {'+', '-', '*', '/', '&', '#', '$', '%', '=', '@'}
 
 solution1 = 0
 solution2 = 0
@@ -12,7 +15,13 @@ def line_generator():
         yield from map(str.strip, file.readlines())
 
 
-@dataclass
+@dataclass(frozen=True)
+class Coord:
+    x: int
+    y: int
+
+
+@dataclass(eq=True, unsafe_hash=True)
 class Number:
     start_x: int
     start_y: int
@@ -48,10 +57,10 @@ coord_offsets = [
 ]
 
 
-def get_adjacent(engine_map: list[list[str]], x: int, y: int) -> Generator[str, None, None]:
+def get_adjacent(engine_map: list[list[str]], x: int, y: int) -> Generator[Tuple[Coord, str], None, None]:
     for offset in coord_offsets:
         try:
-            yield engine_map[y+offset[0]][x+offset[1]]
+            yield Coord(x=x+offset[1], y=y+offset[0]), engine_map[y+offset[0]][x+offset[1]]
         except IndexError:
             continue
 
@@ -83,21 +92,38 @@ for y in range(len(engine_map)):
 
 
 def is_adj_to_symbol(engine_map: list[list[str]], x, y):
-    for symbol in get_adjacent(engine_map, x, y):
+    for _, symbol in get_adjacent(engine_map, x, y):
         if symbol in symbols:
             return True
 
     return False
 
 
-symbols = {'+', '-', '*', '/', '&', '#', '$', '%', '=', '@'}
 for number in numbers:
-    print(number)
+    # Search for any adjacent (part1)
     for coord in number.all_coords:
-        print(coord)
         if is_adj_to_symbol(engine_map, coord[0], coord[1]):
             solution1 += number.get_from_map(engine_map)
             break
+
+
+GEAR_SYMBOL = '*'
+gear_coords: Dict[Coord, Set[Number]] = defaultdict(set)
+for number in numbers:
+    print(number)
+    # Search for gears (part2)
+    for coord in number.all_coords:
+        print(coord)
+        for coord, symbol in get_adjacent(engine_map, coord[0], coord[1]):
+            if symbol == GEAR_SYMBOL:
+                gear_coords[coord].add(number)
+
+
+print(gear_coords)
+for gear_ajd_numbers in gear_coords.values():
+    number_vals = [num.get_from_map(engine_map) for num in gear_ajd_numbers]
+    if len(gear_ajd_numbers) > 1:
+        solution2 += reduce(lambda a, b: a * b, number_vals)
 
 
 print("=== SOLUTIONS ===")
