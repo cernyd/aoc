@@ -1,7 +1,7 @@
 # https://adventofcode.com/2023/day/4
 
-import copy
 from dataclasses import dataclass
+from functools import lru_cache
 from aoc import AoCTask
 
 
@@ -9,12 +9,14 @@ from aoc import AoCTask
 class Card:
     card_i: int
     win_count: int = 0
-    # By default
     winning_offset: int = 1
-    copy: bool = False
 
 
 class AocTaskSolution(AoCTask):
+    def __init__(self) -> None:
+        super().__init__()
+        self.cards = []
+
     @property
     def example_solution1(self) -> int | None:
         return 13
@@ -24,6 +26,11 @@ class AocTaskSolution(AoCTask):
         return 30
 
     def _solution(self):
+        # Remember to reset the cache otherwise the next results will be corrupted by
+        # invalid cached results
+        self.resolve_subtree.cache_clear()
+
+        # Part 1
         cards: list[Card] = []
         lines = list(self._get_lines())
         for line_i, line in enumerate(lines, start=1):
@@ -35,29 +42,31 @@ class AocTaskSolution(AoCTask):
 
             cards.append(Card(card_i=line_i, win_count=len(our_winning), winning_offset=line_i))
 
-        orig_cards = cards[:]
+        # Part 2
+        self.cards = cards[:]
         while cards:
             card = cards.pop(0)
-            self.solution2 += 1
 
-            if not card.win_count:
-                continue
+            result = self.resolve_subtree(card.win_count, card.winning_offset)
+            self.solution2 += result
 
-            # print("_" * 80)
-            # print(f"Card: {card}")
-            for i in range(card.win_count):
-                new_card = copy.copy(orig_cards[card.winning_offset+i])
-                new_card.copy = True
+    @lru_cache
+    def resolve_subtree(self, win_count: int, winning_offset: int):
+        # We count the root card (without subcards)
+        total = 1
 
-                # Short circuit (no need to spawn card if we know it will not have any followup cards)
-                if new_card.win_count == 0:
-                    self.solution2 += 1
-                    continue
+        if not win_count:
+            return total
 
-                cards.append(new_card)
-                # print(f"\tNew card: {new_card}")
+        # Initialize initial cards we won
+        cards = [self.cards[winning_offset+i] for i in range(win_count)]
 
-            print(self.solution2)
+        # Recursively resolve all subtree values (@lru_cache is VERY important for good performance!)
+        while cards:
+            card = cards.pop(0)
+            total += self.resolve_subtree(card.win_count, card.winning_offset)
+
+        return total
 
     @staticmethod
     def _numbers_to_set(nums: str) -> set[int]:
