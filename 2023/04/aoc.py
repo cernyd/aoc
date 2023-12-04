@@ -33,6 +33,8 @@ class AoCTask(abc.ABC):
 
         summary = ""
         for label, file in ("EXAMPLE DATA", "example_input.txt"), ("ACTUAL DATA", "input.txt"):
+            self.solution1 = 0
+            self.solution2 = 0
             print(label.center(80, '-'))
             self._input_file = Path(file).resolve()
             self._solution()
