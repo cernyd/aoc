@@ -20,6 +20,14 @@ class AoCTask(abc.ABC):
         """Define example solution to part 2 here"""
         return None
 
+    @property
+    def actual_solution1(self) -> Optional[int]:
+        return None
+
+    @property
+    def actual_solution2(self) -> Optional[int]:
+        return None
+
     def _get_lines(self):
         yield from map(str.strip, self._input_file.open("r").readlines())
 
@@ -33,15 +41,23 @@ class AoCTask(abc.ABC):
 
         summary = ""
         for label, file in ("EXAMPLE DATA", "example_input.txt"), ("ACTUAL DATA", "input.txt"):
+            self.solution1 = 0
+            self.solution2 = 0
+
             print(label.center(80, '-'))
             self._input_file = Path(file).resolve()
             self._solution()
-            check1 = self.__check_solution("solution 1", self.example_solution1,self.solution1)
-            check2 = self.__check_solution("solution 2", self.example_solution2, self.solution2)
+            check1 = self.__check_solution("solution 1", self.example_solution1 if label == "EXAMPLE DATA" else self.actual_solution1,self.solution1)
+            check2 = self.__check_solution("solution 2", self.example_solution2 if label == "EXAMPLE DATA" else self.actual_solution2, self.solution2)
 
             print(check1)
             print(check2)
-            print()
+
+            if label == "EXAMPLE DATA":
+                print()
+                input("PRESS ANY KEY TO CONTINUE...")
+            else:
+                print()
 
             summary += label + ":\n"
             summary += check1 + "\n"
