@@ -13,6 +13,8 @@ class AocTaskSolution(AoCTask):
         return None
 
     def _solution(self):
+        self.solution1 = 0
+
         for line in self._get_lines():
             _, numbers = line.split(":")
             winning, ours = list(map(self._numbers_to_set, numbers.strip().split("|")))
