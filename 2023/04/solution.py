@@ -16,6 +16,7 @@ class AocTaskSolution(AoCTask):
     def __init__(self) -> None:
         super().__init__()
         self.cards = []
+        self.call_count: int = 0
 
     @property
     def example_solution1(self) -> int | None:
@@ -52,6 +53,9 @@ class AocTaskSolution(AoCTask):
 
     @lru_cache
     def resolve_subtree(self, win_count: int, winning_offset: int):
+        print(f"CALLED {self.call_count}")
+        self.call_count += 1
+
         # We count the root card (without subcards)
         total = 1
 
