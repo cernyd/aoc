@@ -24,4 +24,5 @@ class AocTaskSolution(AoCTask):
         pass
 
 
-AocTaskSolution().run()
+if __name__ == "__main__":
+    AocTaskSolution().run()
