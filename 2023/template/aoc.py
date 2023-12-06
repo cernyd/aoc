@@ -28,13 +28,19 @@ class AoCTask(abc.ABC):
     def actual_solution2(self) -> Optional[int]:
         return None
 
+    @staticmethod
+    def to_number_list(string: str) -> list[int]:
+        return list(map(int, string.split()))
+
     def _get_lines(self):
         yield from map(str.strip, self._input_file.open("r").readlines())
 
     @abstractmethod
     def _solution(self):
         """Define your solution here. Set the solution1 and solution2 vars to submit solution."""
-        pass
+        for line in self._get_lines():
+            # self.to_number_list(line)
+            ...
 
     def run(self):
         print("SOLUTIONS".center(80, '='))
@@ -47,8 +53,10 @@ class AoCTask(abc.ABC):
             print(label.center(80, '-'))
             self._input_file = Path(file).resolve()
             self._solution()
-            check1 = self.__check_solution("solution 1", self.example_solution1 if label == "EXAMPLE DATA" else self.actual_solution1,self.solution1)
-            check2 = self.__check_solution("solution 2", self.example_solution2 if label == "EXAMPLE DATA" else self.actual_solution2, self.solution2)
+            check1 = self.__check_solution("solution 1", self.example_solution1 if label == "EXAMPLE DATA"
+                                           else self.actual_solution1,self.solution1)
+            check2 = self.__check_solution("solution 2", self.example_solution2 if label == "EXAMPLE DATA"
+                                           else self.actual_solution2, self.solution2)
 
             print(check1)
             print(check2)
