@@ -1,14 +1,14 @@
 # https://adventofcode.com/2023/day/7
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 from aoc import AoCTask
 
 
 _card_strengths = [
-    'A', 'K', 'Q', 'J', 'T', '9', '8', '7',
-    '6', '5', '4', '3', '2'
+    'A', 'K', 'Q', 'T', '9', '8', '7',
+    '6', '5', '4', '3', '2', 'J'
 ]
 
 card_strengths = {card: i for i, card in enumerate(reversed(_card_strengths))}
@@ -18,10 +18,27 @@ card_strengths = {card: i for i, card in enumerate(reversed(_card_strengths))}
 class CardHand:
     hand: list[str]
     bid_amount: int
+    hand_without_joker: list[str] = field(init=False)
+
+    def __post_init__(self):
+        self.hand_without_joker = self.hand[:]
+
+        if 'J' in self.hand_without_joker:
+            counts = self.counts.copy()
+            counts.pop('J')
+
+            if not counts:
+                self.hand_without_joker = ['A'] * 5
+                return
+
+            top_count = sorted(counts.items(), key=lambda x: x[1], reverse=True)[0]
+
+            while 'J' in self.hand_without_joker:
+                self.hand_without_joker[self.hand_without_joker.index('J')] = top_count[0]
 
     @property
     def counts(self) -> dict[str, int]:
-        return dict(Counter(self.hand))
+        return dict(Counter(self.hand_without_joker))
 
     @property
     def group_counts(self) -> dict[int, int]:
@@ -89,7 +106,7 @@ class CardHand:
         return not self.is_stronger_than(other)
 
     def __str__(self) -> str:
-        return f'<Hand: {self.hand}, Bid: {self.bid_amount} Strength: {self.strength}>'
+        return f'<Hand: {self.hand}, hand without joker: {self.hand_without_joker}, Bid: {self.bid_amount} Strength: {self.strength}>'
 
 
 class AocTaskSolution(AoCTask):
@@ -123,6 +140,7 @@ class AocTaskSolution(AoCTask):
         for rank, hand in enumerate(sorted(hands), start=1):
             print(f"Rank {rank}: {hand}")
             self.solution1 += hand.bid_amount * rank
+            self.solution2 += hand.bid_amount * rank
 
 
 if __name__ == "__main__":
