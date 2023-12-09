@@ -1,6 +1,7 @@
 # https://adventofcode.com/2023/day/9
 
 from operator import ne
+import re
 from aoc import AoCTask
 import matplotlib.pyplot as plt
 
@@ -39,28 +40,33 @@ class AocTaskSolution(AoCTask):
             for diff in diffs:
                 print(diff)
 
+            diffs = [list(reversed(diff)) for diff in diffs]
             diffs[-1].append(0)
-
+            print("Reversed")
+            for diff in diffs:
+                print(diff)
+            # input()
             for i, diff in reversed(list(enumerate(diffs))):
 
                 if i > 0:
-                    diffs[i-1].append(diffs[i-1][-1] + diff[-1])
+                    diffs[i-1].append(diffs[i-1][-1] - diff[-1])
 
             print("---")
             for diff in diffs:
                 print(diff)
 
-            next_value = diffs[0][-1]
-            if next_value < 0 and diffs[0][-2] < next_value:
-                plt.figure()
-                plt.plot(diffs[0])
-                plt.savefig(f"History_{'_'.join(map(str, history))}")
-                plt.close()
-                input()
+            # next_value = diffs[0][-1]
+            # if next_value < 0 and diffs[0][-2] < next_value:
+            #     plt.figure()
+            #     plt.plot(diffs[0])
+            #     plt.savefig(f"History_{'_'.join(map(str, history))}")
+            #     plt.close()
+            #     input()
 
             print(f"Next value: {diffs[0][-1]}")
             print()
             self.solution1 += diffs[0][-1]
+            self.solution2 += diffs[0][-1]
 
     @staticmethod
     def _get_diffs(history: list[int]) -> list[int]:
