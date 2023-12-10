@@ -2,9 +2,12 @@
 
 from dataclasses import dataclass
 from itertools import product
-from os import pipe
-from typing import Optional, final
+from typing import Literal, Optional
+
+from matplotlib import style
+import numpy as np
 from aoc import AoCTask
+import rich
 
 
 # | is a vertical pipe connecting north and south.
@@ -35,7 +38,14 @@ pipe_types: dict[str, Optional[PipeType]] = {
     "F": PipeType("F", False, True, False, True),
     ".": PipeType(".", False, False, False, False),
     # We can only start here but not return here
-    "S": PipeType("S", False, False, False, False),
+    "S": PipeType("S", True, True, True, True),
+}
+
+
+TravelDirecition = Literal["up", "down", "left", "right"]
+travel_direction_chars = {
+    "up": "\u2191", "down": "\u2193",
+    "left": "\u2190", "right": "\u2192"
 }
 
 
@@ -45,20 +55,21 @@ class MazeIndex:
     col: int
     distance: int = 0
     pipe_type: PipeType = None
+    travel_direction: TravelDirecition = None
 
 
 class AocTaskSolution(AoCTask):
     @property
     def example_solution1(self) -> int | None:
-        return None
+        return 8
 
     @property
     def example_solution2(self) -> int | None:
-        return None
+        return 10
 
     @property
     def actual_solution1(self) -> int | None:
-        return None
+        return 7145
 
     @property
     def actual_solution2(self) -> int | None:
@@ -69,56 +80,92 @@ class AocTaskSolution(AoCTask):
         start_i: MazeIndex = None
         for row_i, col_i in product(range(len(maze)), range(len(maze[0]))):
             if maze[row_i][col_i] == "S":
-                start_i = MazeIndex(row_i, col_i, distance=0)
+                start_i = MazeIndex(row_i, col_i, distance=0, pipe_type=pipe_types["S"])
 
-        explored = set()
+        explored = dict()
         # Paths to explore (until empty)
         next_paths: list[MazeIndex] = [start_i]
-        while len(next_paths) != 0:
-            next_path = next_paths.pop(0)
+        while next_paths:
+            # DFS
+            next_path = next_paths.pop(-1)
 
             self.solution1 = max(self.solution1, next_path.distance)
 
-            explored.add((next_path.row, next_path.col))
+            explored[(next_path.row, next_path.col)] = next_path
 
             adjacent = self._get_adjacent(maze, next_path)
             next_paths.extend([a for a in adjacent if (a.row, a.col) not in explored])
+            # self.print_explored(maze, explored, True)
+            # input()
+
+        final_enclosed = dict()
+        for enclosed_candidate in self.get_enclosed_candidates(maze, explored):
+            pass
+
+        # Visualize final maze
+        self.print_explored(maze, explored, final_enclosed)
+        print()
+        self.print_explored(maze, explored, final_enclosed, True)
+
+    @staticmethod
+    def get_enclosed_candidates(maze, explored):
+        for row_i, col_i in product(range(len(maze)), range(len(maze[0]))):
+            if not explored.get((row_i, col_i), None):
+                yield MazeIndex(row_i, col_i, distance=0, pipe_type=pipe_types[maze[row_i][col_i]])
+
+    def print_explored(self, maze, explored: dict, enclosed: dict = None, print_directions: bool = False):
+        for row_i, row in enumerate(maze):
+            for col_i, col in enumerate(row):
+                pipe = explored.get((row_i, col_i))
+                value = maze[row_i][col_i]
+
+                if pipe:
+                    char = value
+                    if print_directions:
+                        char = travel_direction_chars.get(pipe.travel_direction, "?")
+                    rich.print("[bold green]" + char + "[/bold green]", end="")
+                elif enclosed and (row_i, col_i) in enclosed:
+                    rich.print("[bold yellow]" + value + "[/bold yellow]", end="")
+                else:
+                    print(f"{value}", end="")
+            print()
 
     def _get_adjacent(self, maze: list[list[str]], i: MazeIndex) -> list[MazeIndex]:
         adjacent: list[MazeIndex] = []
+        curr_pipe = i.pipe_type
 
         # Find all possible adjacent
         # To the top
-        if i.row > 0:
+        if i.row > 0 and curr_pipe.up:
             row, col = i.row - 1, i.col
             value = pipe_types[maze[row][col]]
 
             if value.down:
-                adjacent.append(MazeIndex(row, col, i.distance + 1, pipe_type=value))
+                adjacent.append(MazeIndex(row, col, i.distance + 1, pipe_type=value, travel_direction="up"))
 
         # Down
-        if i.row < len(maze) - 1:
+        if i.row < len(maze) - 1 and curr_pipe.down:
             row, col = i.row + 1, i.col
             value: PipeType = pipe_types[maze[row][col]]
 
             if value.up:
-                adjacent.append(MazeIndex(i.row + 1, i.col, i.distance + 1, pipe_type=value))
+                adjacent.append(MazeIndex(i.row + 1, i.col, i.distance + 1, pipe_type=value, travel_direction="down"))
 
         # To the left
-        if i.col > 0:
+        if i.col > 0 and curr_pipe.left:
             row, col = i.row, i.col - 1
             value: PipeType = pipe_types[maze[row][col]]
 
             if value.right:
-                adjacent.append(MazeIndex(i.row, i.col - 1, i.distance + 1, pipe_type=value))
+                adjacent.append(MazeIndex(i.row, i.col - 1, i.distance + 1, pipe_type=value, travel_direction="left"))
 
         # To the right
-        if i.col < len(maze[0]) - 1:
+        if i.col < len(maze[0]) - 1 and curr_pipe.right:
             row, col = i.row, i.col + 1
             value: PipeType = pipe_types[maze[row][col]]
 
             if value.left:
-                adjacent.append(MazeIndex(i.row, i.col + 1, i.distance + 1, pipe_type=value))
+                adjacent.append(MazeIndex(i.row, i.col + 1, i.distance + 1, pipe_type=value, travel_direction="right"))
 
         return adjacent
 
